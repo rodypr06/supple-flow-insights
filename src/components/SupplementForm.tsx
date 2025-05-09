@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +16,7 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
     
     // This will be replaced with actual Supabase integration
     setTimeout(() => {
-      toast({
-        title: "Supplement added",
+      toast("Supplement added", {
         description: "Your new supplement has been added successfully."
       });
       onComplete();

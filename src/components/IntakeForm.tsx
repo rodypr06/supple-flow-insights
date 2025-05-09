@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
@@ -29,8 +28,7 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
     // This will be replaced with actual Supabase integration
     // Logic will include checks to prevent exceeding max dosage
     setTimeout(() => {
-      toast({
-        title: "Intake logged",
+      toast("Intake logged", {
         description: "Your supplement intake has been recorded."
       });
       onComplete();
