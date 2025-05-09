@@ -24,7 +24,7 @@ export const CalendarLog = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-1">
-        <div className="bg-gray-800/50 p-4 rounded-xl">
+        <div className="bg-card/50 p-4 rounded-xl border border-border">
           <Calendar
             mode="single"
             selected={date}
@@ -42,15 +42,15 @@ export const CalendarLog = () => {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-gray-400">Supplement</TableHead>
-              <TableHead className="text-gray-400 text-center">Quantity</TableHead>
-              <TableHead className="text-gray-400 text-right">Time</TableHead>
+              <TableHead className="text-muted-foreground">Supplement</TableHead>
+              <TableHead className="text-muted-foreground text-center">Quantity</TableHead>
+              <TableHead className="text-muted-foreground text-right">Time</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {intakeData.length > 0 ? (
               intakeData.map((intake) => (
-                <TableRow key={intake.id} className="hover:bg-gray-800/50 border-gray-800">
+                <TableRow key={intake.id} className="hover:bg-accent/50 border-border">
                   <TableCell className="font-medium">{intake.supplement}</TableCell>
                   <TableCell className="text-center">{intake.quantity}</TableCell>
                   <TableCell className="text-right">
@@ -60,7 +60,7 @@ export const CalendarLog = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-6 text-gray-500">
+                <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
                   No intakes recorded for this date
                 </TableCell>
               </TableRow>
