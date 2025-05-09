@@ -9,7 +9,7 @@ export const ThemeToggle = () => {
 
   return (
     <div className="flex items-center space-x-2">
-      <Sun className={`h-5 w-5 ${theme === "light" ? "text-blue-400" : "text-gray-400"}`} />
+      <Sun className={`h-5 w-5 ${theme === "light" ? "text-yellow-500" : "text-gray-400"}`} />
       <Switch 
         checked={theme === "dark"}
         onCheckedChange={() => setTheme(theme === "dark" ? "light" : "dark")}

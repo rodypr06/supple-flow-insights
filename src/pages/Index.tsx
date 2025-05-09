@@ -33,7 +33,7 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Dosage Tracker Widget */}
-          <div className="p-6 rounded-2xl bg-card/70 backdrop-blur-lg border border-border">
+          <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <span className="bg-blue-500/20 p-2 rounded-lg mr-3">
                 <CalendarIcon className="h-5 w-5 text-blue-400" />
@@ -44,7 +44,7 @@ const Index = () => {
           </div>
 
           {/* Supplements Widget */}
-          <div className="p-6 rounded-2xl bg-card/70 backdrop-blur-lg border border-border">
+          <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
             <h2 className="text-xl font-semibold mb-4">My Supplements</h2>
             <SupplementsWidget />
             <Button 
@@ -56,13 +56,13 @@ const Index = () => {
           </div>
 
           {/* Fact Widget */}
-          <div className="p-6 rounded-2xl bg-card/70 backdrop-blur-lg border border-border">
+          <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
             <h2 className="text-xl font-semibold mb-4">Did You Know?</h2>
             <FactWidget />
           </div>
 
           {/* Calendar Log - Full Width */}
-          <div className="p-6 rounded-2xl bg-card/70 backdrop-blur-lg border border-border md:col-span-2 lg:col-span-3">
+          <div className="p-6 rounded-2xl bg-card border border-border shadow-sm md:col-span-2 lg:col-span-3">
             <h2 className="text-xl font-semibold mb-4">Intake Calendar</h2>
             <CalendarLog />
             <Button 

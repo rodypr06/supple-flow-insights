@@ -38,17 +38,17 @@ export const SupplementsWidget = () => {
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="text-gray-400">Supplement</TableHead>
-            <TableHead className="text-gray-400 text-right">Max Daily</TableHead>
-            <TableHead className="text-gray-400 text-right">Actions</TableHead>
+            <TableHead className="text-muted-foreground">Supplement</TableHead>
+            <TableHead className="text-muted-foreground text-right">Max Daily</TableHead>
+            <TableHead className="text-muted-foreground text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {supplements.map((supplement) => (
-            <TableRow key={supplement.id} className="hover:bg-gray-800/50 border-gray-800">
+            <TableRow key={supplement.id} className="hover:bg-accent/50 border-border">
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-md bg-gray-800 overflow-hidden">
+                  <div className="h-10 w-10 rounded-md bg-muted overflow-hidden">
                     <img 
                       src={supplement.image} 
                       alt={supplement.name} 
