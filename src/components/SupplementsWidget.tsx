@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -9,74 +8,185 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { useSupplements } from "@/hooks/use-supplements";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase, type Supplement } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
+import { Trash2, Pencil } from "lucide-react";
 
-export const SupplementsWidget = () => {
-  // This is a placeholder for data that will come from Supabase
-  const supplements = [
-    {
-      id: "1",
-      name: "Vitamin D",
-      image: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9",
-      maxDosage: 4
-    },
-    {
-      id: "2",
-      name: "Omega-3",
-      image: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9",
-      maxDosage: 2
-    },
-    {
-      id: "3",
-      name: "Magnesium",
-      image: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9",
-      maxDosage: 2
+interface EditSupplementFormProps {
+  supplement: {
+    id: string;
+    name: string;
+    max_dosage: number;
+    milligrams: number;
+    image_url?: string;
+  };
+  onClose: () => void;
+}
+
+const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) => {
+  const { toast } = useToast();
+  const [name, setName] = useState(supplement.name);
+  const [maxDosage, setMaxDosage] = useState(supplement.max_dosage);
+  const [milligrams, setMilligrams] = useState(supplement.milligrams);
+  const [imageUrl, setImageUrl] = useState(supplement.image_url || "");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase
+        .from('supplements')
+        .update({
+          name,
+          max_dosage: maxDosage,
+          milligrams,
+          image_url: imageUrl || null
+        })
+        .eq('id', supplement.id);
+
+      if (error) throw error;
+
+      toast("Success", {
+        description: "Supplement updated successfully."
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error updating supplement:', error);
+      toast("Error", {
+        description: "Failed to update supplement. Please try again."
+      });
     }
-  ];
+  };
 
   return (
-    <div className="overflow-x-auto">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Name</Label>
+        <Input
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="bg-gray-800 border-gray-700"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="maxDosage">Max Daily Dosage</Label>
+        <Input
+          id="maxDosage"
+          type="number"
+          min="1"
+          value={maxDosage}
+          onChange={(e) => setMaxDosage(Number(e.target.value))}
+          className="bg-gray-800 border-gray-700"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="milligrams">Milligrams per Unit</Label>
+        <Input
+          id="milligrams"
+          type="number"
+          min="1"
+          value={milligrams}
+          onChange={(e) => setMilligrams(Number(e.target.value))}
+          className="bg-gray-800 border-gray-700"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="imageUrl">Image URL (optional)</Label>
+        <Input
+          id="imageUrl"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          className="bg-gray-800 border-gray-700"
+        />
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4">
+        <Button variant="outline" type="button" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          Save Changes
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+export function SupplementsWidget() {
+  const { data: supplements, isLoading } = useSupplements();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async (supplementId: string) => {
+    if (!confirm('Are you sure you want to delete this supplement?')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('supplements')
+        .delete()
+        .eq('id', supplementId);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ['supplements'] });
+      toast({
+        description: "Supplement deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting supplement:', error);
+      toast({
+        description: "Failed to delete supplement",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-4">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="text-muted-foreground">Supplement</TableHead>
-            <TableHead className="text-muted-foreground text-right">Max Daily</TableHead>
-            <TableHead className="text-muted-foreground text-right">Actions</TableHead>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Max Daily Dosage</TableHead>
+            <TableHead>Milligrams</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {supplements.map((supplement) => (
-            <TableRow key={supplement.id} className="hover:bg-accent/50 border-border">
+          {supplements?.map((supplement) => (
+            <TableRow key={supplement.id}>
+              <TableCell>{supplement.name}</TableCell>
+              <TableCell>{supplement.max_dosage} units</TableCell>
+              <TableCell>{supplement.milligrams}mg</TableCell>
               <TableCell>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-md bg-muted overflow-hidden">
-                    <img 
-                      src={supplement.image} 
-                      alt={supplement.name} 
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <span className="font-medium">{supplement.name}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right">{supplement.maxDosage}</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <span className="sr-only">Edit</span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-4 h-4"
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(supplement.id)}
+                    disabled={isDeleting}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                    />
-                  </svg>
-                </Button>
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -84,4 +194,4 @@ export const SupplementsWidget = () => {
       </Table>
     </div>
   );
-};
+}

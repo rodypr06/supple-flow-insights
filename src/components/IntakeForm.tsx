@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useSupplements } from "@/hooks/use-supplements";
+import { useAddIntake } from "@/hooks/use-intakes";
 
 interface IntakeFormProps {
   onComplete: () => void;
@@ -11,29 +13,51 @@ interface IntakeFormProps {
 
 export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
   const { toast } = useToast();
+  const { data: supplements, isLoading: isLoadingSupplements } = useSupplements();
+  const addIntake = useAddIntake();
   
   // Default to current time for new intakes
   const [time, setTime] = useState(format(new Date(), "HH:mm"));
+  const [supplementId, setSupplementId] = useState("");
+  const [quantity, setQuantity] = useState(1);
   
-  // This is placeholder data that will come from Supabase
-  const supplements = [
-    { id: "1", name: "Vitamin D" },
-    { id: "2", name: "Omega-3" },
-    { id: "3", name: "Magnesium" }
-  ];
-  
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // This will be replaced with actual Supabase integration
-    // Logic will include checks to prevent exceeding max dosage
-    setTimeout(() => {
-      toast("Intake logged", {
+    if (!supplementId) {
+      toast("Error", {
+        description: "Please select a supplement"
+      });
+      return;
+    }
+
+    try {
+      // Parse the time and create a new date for today
+      const takenAt = new Date();
+      const [hours, minutes] = time.split(":").map(Number);
+      takenAt.setHours(hours, minutes, 0, 0);
+
+      await addIntake.mutateAsync({
+        supplement_id: supplementId,
+        quantity,
+        taken_at: takenAt.toISOString()
+      });
+
+      toast("Success", {
         description: "Your supplement intake has been recorded."
       });
       onComplete();
-    }, 500);
+    } catch (error) {
+      console.error('Error adding intake:', error);
+      toast("Error", {
+        description: "Failed to record intake. Please try again."
+      });
+    }
   };
+  
+  if (isLoadingSupplements) {
+    return <div>Loading...</div>;
+  }
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -41,10 +65,12 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
         <Label htmlFor="supplement">Supplement</Label>
         <select 
           id="supplement" 
-          className="w-full bg-gray-800 border border-gray-700 rounded-md h-10 px-3 py-2 text-sm"
+          className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-md h-10 px-3 py-2 text-sm"
+          value={supplementId}
+          onChange={(e) => setSupplementId(e.target.value)}
         >
           <option value="">Select a supplement</option>
-          {supplements.map(supplement => (
+          {supplements?.map(supplement => (
             <option key={supplement.id} value={supplement.id}>
               {supplement.name}
             </option>
@@ -58,8 +84,9 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
           id="quantity" 
           type="number" 
           min="1" 
-          defaultValue="1" 
-          className="bg-gray-800 border-gray-700" 
+          value={quantity}
+          onChange={(e) => setQuantity(Number(e.target.value))}
+          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white" 
         />
       </div>
       
@@ -70,7 +97,7 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
           type="time" 
           value={time} 
           onChange={(e) => setTime(e.target.value)}
-          className="bg-gray-800 border-gray-700" 
+          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white" 
         />
       </div>
       
@@ -78,7 +105,9 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
         <Button variant="outline" type="button" onClick={onComplete}>
           Cancel
         </Button>
-        <Button type="submit">Log Intake</Button>
+        <Button type="submit" disabled={addIntake.isPending}>
+          {addIntake.isPending ? "Logging..." : "Log Intake"}
+        </Button>
       </div>
     </form>
   );
