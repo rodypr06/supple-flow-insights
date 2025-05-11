@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAddSupplement } from "@/hooks/use-supplements";
-import { supabase } from "@/lib/supabase";
+import { useUserProfile } from "@/App";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface SupplementFormProps {
@@ -13,7 +13,8 @@ interface SupplementFormProps {
 
 export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
   const { toast } = useToast();
-  const addSupplement = useAddSupplement();
+  const { user } = useUserProfile();
+  const addSupplement = useAddSupplement(user);
   const queryClient = useQueryClient();
   
   const [name, setName] = useState("");
@@ -34,14 +35,13 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
     }
 
     try {
-      const { error } = await supabase.from("supplements").insert({
+      await addSupplement.mutateAsync({
         name,
         image_url: imageUrl || null,
         max_dosage: parseInt(maxDosage),
         capsule_mg: parseInt(capsuleMg) || null,
+        milligrams: 0, // or remove if not needed
       });
-
-      if (error) throw error;
 
       toast("Success", {
         description: "Your new supplement has been added successfully."

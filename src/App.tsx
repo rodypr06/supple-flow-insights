@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Dashboard } from "@/pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { createContext, useContext, useState, ReactNode } from 'react';
+import { useUserProfiles, addUserProfile } from "@/hooks/use-user-profiles";
 
 // User profile context for local user selection
 interface UserProfileContextType {
@@ -34,22 +35,23 @@ export function useUserProfile() {
 function UserProfileSelector() {
   const { user, setUser } = useUserProfile();
   const [input, setInput] = useState('');
-  const [profiles, setProfiles] = useState(() => {
-    const p = localStorage.getItem('user_profiles');
-    return p ? JSON.parse(p) : [];
-  });
+  const { data: profiles = [], refetch, isLoading } = useUserProfiles();
 
   const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setUser(e.target.value);
   };
-  const handleCreate = (e: React.FormEvent) => {
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    const newProfiles = [...new Set([...profiles, input.trim()])];
-    setProfiles(newProfiles);
-    setUser(input.trim());
-    localStorage.setItem('user_profiles', JSON.stringify(newProfiles));
-    setInput('');
+    try {
+      await addUserProfile(input.trim());
+      setUser(input.trim());
+      setInput('');
+      refetch();
+    } catch (err: any) {
+      alert("Error creating user: " + err.message);
+    }
   };
 
   return (

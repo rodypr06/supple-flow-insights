@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase, type IntakeLog } from '@/lib/supabase';
+import { supabase, type Intake } from '@/lib/supabase';
 import { startOfDay, endOfDay } from 'date-fns';
 
 // Helper function to get start and end of day in UTC
@@ -12,12 +12,12 @@ const getDayBounds = (date: Date) => {
   };
 };
 
-// Fetch intakes for a specific date
-export const useIntakesByDate = (date: Date) => {
+// Fetch intakes for a specific date and user
+export const useIntakesByDate = (date: Date, user_name: string) => {
   const { start, end } = getDayBounds(date);
 
   return useQuery({
-    queryKey: ['intakes', start],
+    queryKey: ['intakes', start, user_name],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('intake_logs')
@@ -31,39 +31,39 @@ export const useIntakesByDate = (date: Date) => {
         `)
         .gte('taken_at', start)
         .lte('taken_at', end)
+        .eq('user_name', user_name)
         .order('taken_at', { ascending: false });
-      
       if (error) throw error;
-      return data as (IntakeLog & { supplements: { id: string; name: string; max_dosage: number } })[];
+      return data as (Intake & { supplements: { id: string; name: string; max_dosage: number } })[];
     },
+    enabled: !!user_name,
   });
 };
 
-// Add new intake
-export const useAddIntake = () => {
+// Add new intake for a user
+export const useAddIntake = (user_name: string) => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (newIntake: Omit<IntakeLog, 'id' | 'created_at'>) => {
+    mutationFn: async (newIntake: Omit<Intake, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('intake_logs')
-        .insert([newIntake])
+        .insert([{ ...newIntake, user_name }])
         .select()
         .single();
-      
       if (error) throw error;
-      return data as IntakeLog;
+      return data as Intake;
     },
     onSuccess: (_, variables) => {
       // Invalidate queries for the specific date
       const date = new Date(variables.taken_at);
       const { start } = getDayBounds(date);
-      queryClient.invalidateQueries({ queryKey: ['intakes', start] });
+      queryClient.invalidateQueries({ queryKey: ['intakes', start, user_name] });
     },
   });
 };
 
-// Get today's intakes
-export const useTodayIntakes = () => {
-  return useIntakesByDate(new Date());
+// Get today's intakes for a user
+export const useTodayIntakes = (user_name: string) => {
+  return useIntakesByDate(new Date(), user_name);
 }; 

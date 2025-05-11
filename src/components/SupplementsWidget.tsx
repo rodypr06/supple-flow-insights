@@ -16,6 +16,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase, type Supplement } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, Pencil } from "lucide-react";
+import { useUserProfile } from "@/App";
+import { useUpdateSupplement } from "@/hooks/use-supplements";
 
 interface EditSupplementFormProps {
   supplement: {
@@ -30,26 +32,25 @@ interface EditSupplementFormProps {
 
 const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) => {
   const { toast } = useToast();
+  const { user } = useUserProfile();
+  const updateSupplement = useUpdateSupplement(user);
   const [name, setName] = useState(supplement.name);
   const [maxDosage, setMaxDosage] = useState(supplement.max_dosage);
   const [milligrams, setMilligrams] = useState(supplement.milligrams);
+  const [capsuleMg, setCapsuleMg] = useState(supplement.capsule_mg || 0);
   const [imageUrl, setImageUrl] = useState(supplement.image_url || "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { error } = await supabase
-        .from('supplements')
-        .update({
-          name,
-          max_dosage: maxDosage,
-          milligrams,
-          image_url: imageUrl || null
-        })
-        .eq('id', supplement.id);
-
-      if (error) throw error;
-
+      await updateSupplement.mutateAsync({
+        id: supplement.id,
+        name,
+        max_dosage: maxDosage,
+        milligrams,
+        capsule_mg: capsuleMg,
+        image_url: imageUrl || null
+      });
       toast("Success", {
         description: "Supplement updated successfully."
       });
@@ -99,6 +100,18 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="capsuleMg">Capsule Mg</Label>
+        <Input
+          id="capsuleMg"
+          type="number"
+          min="0"
+          value={capsuleMg}
+          onChange={(e) => setCapsuleMg(Number(e.target.value))}
+          className="bg-gray-800 border-gray-700"
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="imageUrl">Image URL (optional)</Label>
         <Input
           id="imageUrl"
@@ -121,10 +134,12 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
 };
 
 export function SupplementsWidget() {
-  const { data: supplements, isLoading } = useSupplements();
+  const { user } = useUserProfile();
+  const { data: supplements, isLoading } = useSupplements(user);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editSupplement, setEditSupplement] = useState<Supplement | null>(null);
 
   const handleDelete = async (supplementId: string) => {
     if (!confirm('Are you sure you want to delete this supplement?')) {
@@ -181,6 +196,13 @@ export function SupplementsWidget() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => setEditSupplement(supplement)}
+                  >
+                    <Pencil className="h-4 w-4 text-blue-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleDelete(supplement.id)}
                     disabled={isDeleting}
                   >
@@ -192,6 +214,16 @@ export function SupplementsWidget() {
           ))}
         </TableBody>
       </Table>
+      {editSupplement && (
+        <Dialog open={!!editSupplement} onOpenChange={() => setEditSupplement(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Supplement</DialogTitle>
+            </DialogHeader>
+            <EditSupplementForm supplement={editSupplement} onClose={() => setEditSupplement(null)} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
