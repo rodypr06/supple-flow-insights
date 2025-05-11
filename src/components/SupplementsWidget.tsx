@@ -24,7 +24,7 @@ interface EditSupplementFormProps {
     id: string;
     name: string;
     max_dosage: number;
-    milligrams: number;
+    capsule_mg?: number;
     image_url?: string;
   };
   onClose: () => void;
@@ -36,7 +36,6 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
   const updateSupplement = useUpdateSupplement(user);
   const [name, setName] = useState(supplement.name);
   const [maxDosage, setMaxDosage] = useState(supplement.max_dosage);
-  const [milligrams, setMilligrams] = useState(supplement.milligrams);
   const [capsuleMg, setCapsuleMg] = useState(supplement.capsule_mg || 0);
   const [imageUrl, setImageUrl] = useState(supplement.image_url || "");
 
@@ -47,19 +46,14 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
         id: supplement.id,
         name,
         max_dosage: maxDosage,
-        milligrams,
         capsule_mg: capsuleMg,
         image_url: imageUrl || null
       });
-      toast("Success", {
-        description: "Supplement updated successfully."
-      });
+      toast("Success: Supplement updated successfully.");
       onClose();
     } catch (error) {
       console.error('Error updating supplement:', error);
-      toast("Error", {
-        description: "Failed to update supplement. Please try again."
-      });
+      toast("Error: Failed to update supplement. Please try again.");
     }
   };
 
@@ -83,18 +77,6 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
           min="1"
           value={maxDosage}
           onChange={(e) => setMaxDosage(Number(e.target.value))}
-          className="bg-gray-800 border-gray-700"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="milligrams">Milligrams per Unit</Label>
-        <Input
-          id="milligrams"
-          type="number"
-          min="1"
-          value={milligrams}
-          onChange={(e) => setMilligrams(Number(e.target.value))}
           className="bg-gray-800 border-gray-700"
         />
       </div>
@@ -156,15 +138,10 @@ export function SupplementsWidget() {
       if (error) throw error;
 
       await queryClient.invalidateQueries({ queryKey: ['supplements'] });
-      toast({
-        description: "Supplement deleted successfully",
-      });
+      toast("Supplement deleted successfully");
     } catch (error) {
       console.error('Error deleting supplement:', error);
-      toast({
-        description: "Failed to delete supplement",
-        variant: "destructive",
-      });
+      toast("Failed to delete supplement");
     } finally {
       setIsDeleting(false);
     }
@@ -181,7 +158,6 @@ export function SupplementsWidget() {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Max Daily Dosage</TableHead>
-            <TableHead>Milligrams</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -190,7 +166,6 @@ export function SupplementsWidget() {
             <TableRow key={supplement.id}>
               <TableCell>{supplement.name}</TableCell>
               <TableCell>{supplement.max_dosage} units</TableCell>
-              <TableCell>{supplement.milligrams}mg</TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button

@@ -40,7 +40,6 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
         image_url: imageUrl || null,
         max_dosage: parseInt(maxDosage),
         capsule_mg: parseInt(capsuleMg) || null,
-        milligrams: 0, // or remove if not needed
       });
 
       toast("Success", {
@@ -57,10 +56,10 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
       await queryClient.invalidateQueries({ queryKey: ["supplements"] });
 
       onComplete();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding supplement:", error);
       toast("Error", {
-        description: "Failed to add supplement. Please try again."
+        description: "Failed to add supplement. Please try again. " + (error?.message || ""),
       });
     } finally {
       setIsSubmitting(false);

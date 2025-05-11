@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useSupplements } from "@/hooks/use-supplements";
 import { useAddIntake } from "@/hooks/use-intakes";
+import { useUserProfile } from "@/App";
 
 interface IntakeFormProps {
   onComplete: () => void;
@@ -13,8 +14,9 @@ interface IntakeFormProps {
 
 export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
   const { toast } = useToast();
-  const { data: supplements, isLoading: isLoadingSupplements } = useSupplements();
-  const addIntake = useAddIntake();
+  const { user } = useUserProfile();
+  const { data: supplements, isLoading: isLoadingSupplements } = useSupplements(user);
+  const addIntake = useAddIntake(user);
   
   // Default to current time for new intakes
   const [time, setTime] = useState(format(new Date(), "HH:mm"));

@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import { useUserProfile } from "@/App";
 
 interface EditIntakeFormProps {
   intake: {
@@ -54,15 +55,11 @@ const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) =
 
       if (error) throw error;
 
-      toast("Success", {
-        description: "Intake updated successfully."
-      });
+      toast("Intake updated successfully.");
       onClose();
     } catch (error) {
       console.error('Error updating intake:', error);
-      toast("Error", {
-        description: "Failed to update intake. Please try again."
-      });
+      toast("Failed to update intake. Please try again.");
     }
   };
 
@@ -120,8 +117,9 @@ const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) =
 };
 
 export function IntakeHistory() {
-  const { data: intakes, isLoading } = useTodayIntakes();
-  const { data: supplements } = useSupplements();
+  const { user } = useUserProfile();
+  const { data: intakes, isLoading } = useTodayIntakes(user);
+  const { data: supplements } = useSupplements(user);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -141,15 +139,10 @@ export function IntakeHistory() {
       if (error) throw error;
 
       await queryClient.invalidateQueries({ queryKey: ['intakes'] });
-      toast({
-        description: "Intake deleted successfully",
-      });
+      toast("Intake deleted successfully");
     } catch (error) {
       console.error('Error deleting intake:', error);
-      toast({
-        description: "Failed to delete intake",
-        variant: "destructive",
-      });
+      toast("Failed to delete intake");
     } finally {
       setIsDeleting(false);
     }

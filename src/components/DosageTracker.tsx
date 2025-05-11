@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/table";
 import { useTodayIntakes } from "@/hooks/use-intakes";
 import { useSupplements } from "@/hooks/use-supplements";
-import { useAIInsights } from "@/hooks/use-ai-insights";
 import { format } from "date-fns";
 import { supplementGuidelines } from '@/lib/supplement-guidelines';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,11 +19,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { KratomGuidelinesTable } from './KratomGuidelinesTable';
+import { useUserProfile } from "@/App";
 
 export const DosageTracker = () => {
-  const { data: intakes, isLoading: isLoadingIntakes } = useTodayIntakes();
-  const { data: supplements, isLoading: isLoadingSupplements } = useSupplements();
-  const { data: aiInsight, isLoading: isLoadingInsight } = useAIInsights();
+  const { user } = useUserProfile();
+  const { data: intakes, isLoading: isLoadingIntakes } = useTodayIntakes(user);
+  const { data: supplements, isLoading: isLoadingSupplements } = useSupplements(user);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export const DosageTracker = () => {
 
   const totalKratomGrams = kratomIntakes.reduce((total, intake) => {
     const supplement = supplements?.find(s => s.id === intake.supplement_id);
-    return total + (intake.quantity * (supplement?.milligrams || 0) / 1000);
+    return total + (intake.quantity * (supplement?.capsule_mg || 0) / 1000);
   }, 0);
 
   const handleDeleteIntake = async (intakeId: string) => {
@@ -74,9 +74,9 @@ export const DosageTracker = () => {
         .eq('id', intakeId);
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ['intakes'] });
-      toast({ description: 'Intake deleted successfully' });
+      toast('Intake deleted successfully');
     } catch (error) {
-      toast({ description: 'Failed to delete intake', variant: 'destructive' });
+      toast('Failed to delete intake');
     } finally {
       setIsDeleting(null);
     }
@@ -158,23 +158,6 @@ export const DosageTracker = () => {
           </CardContent>
         </Card>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Insights</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoadingInsight ? (
-            <div>Generating insights...</div>
-          ) : aiInsight ? (
-            <p className="text-sm text-muted-foreground">{aiInsight}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No insights available yet. Log some intakes to get personalized recommendations.
-            </p>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };

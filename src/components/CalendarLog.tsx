@@ -15,23 +15,27 @@ import { supabase } from '@/lib/supabase';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from '@/components/ui/context-menu';
 import { addMonths, startOfMonth, endOfMonth, format as formatDate, isSameDay, isToday, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { useUserProfile } from "@/App";
 
 export const CalendarLog = () => {
+  const { user } = useUserProfile();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(startOfMonth(new Date()));
 
   // Fetch all intakes for the visible month
   const { data: monthIntakes, isLoading: isMonthLoading } = useQuery({
-    queryKey: ['intakes-month', month.toISOString()],
+    queryKey: ['intakes-month', month.toISOString(), user],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('intake_logs')
-        .select('id, taken_at, quantity, supplements (name)')
+        .select('id, taken_at, quantity, supplements (name), user_name')
         .gte('taken_at', startOfMonth(month).toISOString())
-        .lte('taken_at', endOfMonth(month).toISOString());
+        .lte('taken_at', endOfMonth(month).toISOString())
+        .eq('user_name', user);
       if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
   // Map: YYYY-MM-DD => count
@@ -46,7 +50,7 @@ export const CalendarLog = () => {
   const latestIntakeDay = allDays.length > 0 ? parseISO(allDays[allDays.length - 1]) : undefined;
 
   // Fetch intakes for selected day
-  const { data: intakes, isLoading } = useIntakesByDate(date || new Date());
+  const { data: intakes, isLoading } = useIntakesByDate(date || new Date(), user);
 
   // Custom day render for react-day-picker
   function renderDay(props: any) {

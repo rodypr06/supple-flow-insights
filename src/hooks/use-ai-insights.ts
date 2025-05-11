@@ -9,12 +9,12 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
-export const useAIInsights = () => {
-  const { data: intakes } = useTodayIntakes();
-  const { data: supplements } = useSupplements();
+export const useAIInsights = (user: string) => {
+  const { data: intakes } = useTodayIntakes(user);
+  const { data: supplements } = useSupplements(user);
 
   return useQuery({
-    queryKey: ['ai-insights', intakes, supplements],
+    queryKey: ['ai-insights', user, intakes, supplements],
     queryFn: async () => {
       if (!intakes || !supplements) return null;
 
@@ -24,7 +24,6 @@ export const useAIInsights = () => {
         return {
           supplement: supplement?.name,
           quantity: intake.quantity,
-          milligrams: supplement?.milligrams || 0,
           capsule_mg: supplement?.capsule_mg || null,
           time: new Date(intake.taken_at).toLocaleTimeString()
         };
@@ -33,7 +32,6 @@ export const useAIInsights = () => {
       const supplementData = supplements.map(supplement => ({
         name: supplement.name,
         maxDosage: supplement.max_dosage,
-        milligrams: supplement.milligrams,
         capsule_mg: supplement.capsule_mg || null
       }));
 
@@ -43,9 +41,8 @@ export const useAIInsights = () => {
       );
       const capsuleMg = supplementGuidelines.kratom.capsuleSize;
       const totalKratomCapsules = kratomIntakes.reduce((total, intake) => {
-        // If user logs in grams, convert to capsules
         if (intake.capsule_mg) {
-          return total + Math.round(intake.quantity * (intake.milligrams / intake.capsule_mg));
+          return total + Math.round(intake.quantity);
         }
         return total + intake.quantity;
       }, 0);
@@ -94,7 +91,7 @@ Keep the response concise (2-3 sentences) and actionable. Do not mention beginne
         return null;
       }
     },
-    enabled: !!intakes && !!supplements,
+    enabled: !!user && !!intakes && !!supplements,
     refetchInterval: 1000 * 60 * 30, // Refetch every 30 minutes
   });
 }; 

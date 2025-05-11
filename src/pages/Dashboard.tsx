@@ -13,11 +13,15 @@ import { InfoIcon } from "lucide-react";
 import { supplementGuidelines } from "@/lib/supplement-guidelines";
 import { CalendarLog } from "@/components/CalendarLog";
 import { useEffect, useState } from 'react';
+import { useUserProfile } from "@/App";
+import { useAIInsights } from "@/hooks/use-ai-insights";
 
 export const Dashboard = () => {
   const [showIntakeForm, setShowIntakeForm] = React.useState(false);
   const [showSupplementForm, setShowSupplementForm] = React.useState(false);
   const [editMode, setEditMode] = useState(false);
+  const { user } = useUserProfile();
+  const { data: aiInsight, isLoading: isLoadingInsight } = useAIInsights(user);
 
   return (
     <div className="container mx-auto p-4">
@@ -47,7 +51,15 @@ export const Dashboard = () => {
           </div>
           <div className="bg-card/50 p-6 rounded-xl border border-border">
             <h2 className="text-lg font-semibold mb-4">AI Insights</h2>
-            {/* Place your AI Insights component here, or move logic from DosageTracker if needed */}
+            {isLoadingInsight ? (
+              <div>Generating insights...</div>
+            ) : aiInsight ? (
+              <div className="text-sm text-muted-foreground whitespace-pre-line break-words">{aiInsight}</div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No insights available yet. Log some intakes to get personalized recommendations.
+              </p>
+            )}
           </div>
           <div className="bg-card/50 p-6 rounded-xl border border-border">
             <h2 className="text-lg font-semibold mb-4">Intake Calendar</h2>

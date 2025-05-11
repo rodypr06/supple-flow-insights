@@ -15,7 +15,6 @@ export type Supplement = {
   created_at: string;
   name: string;
   max_dosage: number;
-  milligrams: number;
   capsule_mg?: number;
   image_url?: string;
 };
