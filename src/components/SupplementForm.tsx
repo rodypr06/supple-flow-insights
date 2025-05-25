@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAddSupplement } from "@/hooks/use-supplements";
 import { useUserProfile } from "@/App";
 import { useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SupplementFormProps {
   onComplete: () => void;
@@ -19,17 +20,17 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
   
   const [name, setName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [maxDosage, setMaxDosage] = useState("");
-  const [capsuleMg, setCapsuleMg] = useState("");
+  const [dosage, setDosage] = useState("");
+  const [unit, setUnit] = useState("mg");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!name) {
+    if (!name || !dosage) {
       toast("Error", {
-        description: "Please enter a supplement name"
+        description: "Please enter a supplement name and dosage"
       });
       return;
     }
@@ -38,28 +39,25 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
       await addSupplement.mutateAsync({
         name,
         image_url: imageUrl || null,
-        max_dosage: parseInt(maxDosage),
-        capsule_mg: parseInt(capsuleMg) || null,
+        max_dosage: parseFloat(dosage),
       });
 
       toast("Success", {
-        description: "Your new supplement has been added successfully."
+        description: "Supplement added successfully"
       });
 
       // Reset form
       setName("");
       setImageUrl("");
-      setMaxDosage("");
-      setCapsuleMg("");
+      setDosage("");
+      setUnit("mg");
 
       // Refresh supplements list
-      await queryClient.invalidateQueries({ queryKey: ["supplements"] });
-
+      queryClient.invalidateQueries({ queryKey: ['supplements'] });
       onComplete();
-    } catch (error: any) {
-      console.error("Error adding supplement:", error);
+    } catch (error) {
       toast("Error", {
-        description: "Failed to add supplement. Please try again. " + (error?.message || ""),
+        description: "Failed to add supplement"
       });
     } finally {
       setIsSubmitting(false);
@@ -76,6 +74,7 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
           className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          required
         />
       </div>
       
@@ -92,29 +91,33 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="max-dosage">Maximum Daily Dosage</Label>
+        <Label htmlFor="dosage">Dosage</Label>
         <Input 
-          id="max-dosage" 
+          id="dosage" 
           type="number" 
           min="1" 
-          value={maxDosage}
-          onChange={(e) => setMaxDosage(e.target.value)}
+          value={dosage}
+          onChange={(e) => setDosage(e.target.value)}
           className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white" 
+          required
         />
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="capsule-mg">Capsule Milligrams</Label>
-        <Input 
-          id="capsule-mg" 
-          type="number" 
-          min="1" 
-          value={capsuleMg}
-          onChange={(e) => setCapsuleMg(e.target.value)}
-          placeholder="e.g., 700 for kratom"
-          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white" 
-          required
-        />
+        <Label htmlFor="unit">Unit</Label>
+        <Select value={unit} onValueChange={setUnit}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select unit" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="mg">mg</SelectItem>
+            <SelectItem value="g">g</SelectItem>
+            <SelectItem value="mcg">mcg</SelectItem>
+            <SelectItem value="IU">IU</SelectItem>
+            <SelectItem value="ml">ml</SelectItem>
+            <SelectItem value="oz">oz</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       
       <div className="flex justify-end gap-3 pt-4">

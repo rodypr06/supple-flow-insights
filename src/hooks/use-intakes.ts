@@ -1,69 +1,70 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase, type Intake } from '@/lib/supabase';
+import { db, Intake } from '@/lib/supabase';
+import { useUserProfile } from '@/App';
+import { toast } from 'sonner';
 import { startOfDay, endOfDay } from 'date-fns';
 
-// Helper function to get start and end of day in UTC
-const getDayBounds = (date: Date) => {
-  const start = startOfDay(date);
-  const end = endOfDay(date);
-  return {
-    start: start.toISOString(),
-    end: end.toISOString()
-  };
-};
-
-// Fetch intakes for a specific date and user
-export const useIntakesByDate = (date: Date, user_name: string) => {
-  const { start, end } = getDayBounds(date);
-
-  return useQuery({
-    queryKey: ['intakes', start, user_name],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('intake_logs')
-        .select(`
-          *,
-          supplements (
-            id,
-            name,
-            max_dosage
-          )
-        `)
-        .gte('taken_at', start)
-        .lte('taken_at', end)
-        .eq('user_name', user_name)
-        .order('taken_at', { ascending: false });
-      if (error) throw error;
-      return data as (Intake & { supplements: { id: string; name: string; max_dosage: number } })[];
-    },
-    enabled: !!user_name,
-  });
-};
-
-// Add new intake for a user
-export const useAddIntake = (user_name: string) => {
+export function useIntakes(startDate?: string, endDate?: string) {
+  const { user } = useUserProfile();
   const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (newIntake: Omit<Intake, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('intake_logs')
-        .insert([{ ...newIntake, user_name }])
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Intake;
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate queries for the specific date
-      const date = new Date(variables.taken_at);
-      const { start } = getDayBounds(date);
-      queryClient.invalidateQueries({ queryKey: ['intakes', start, user_name] });
-    },
-  });
-};
 
-// Get today's intakes for a user
-export const useTodayIntakes = (user_name: string) => {
-  return useIntakesByDate(new Date(), user_name);
-}; 
+  const {
+    data: intakes = [],
+    isLoading,
+    error
+  } = useQuery({
+    queryKey: ['intakes', user, startDate, endDate],
+    queryFn: () => db.intakes.list(user, startDate, endDate),
+    enabled: !!user
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (newIntake: Omit<Intake, 'id' | 'created_at'>) =>
+      db.intakes.create({ ...newIntake, user_id: user }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intakes', user] });
+      toast.success('Intake logged successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to log intake: ${error.message}`);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => db.intakes.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intakes', user] });
+      toast.success('Intake deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete intake: ${error.message}`);
+    }
+  });
+
+  return {
+    intakes,
+    isLoading,
+    error,
+    createIntake: createMutation.mutate,
+    deleteIntake: deleteMutation.mutate,
+    isCreating: createMutation.isPending,
+    isDeleting: deleteMutation.isPending
+  };
+}
+
+// Helper hook for getting today's intakes
+export function useTodayIntakes() {
+  const today = new Date();
+  return useIntakes(
+    startOfDay(today).toISOString(),
+    endOfDay(today).toISOString()
+  );
+}
+
+// Helper hook for getting intakes for a specific date
+export function useIntakesByDate(date: Date) {
+  return useIntakes(
+    startOfDay(date).toISOString(),
+    endOfDay(date).toISOString()
+  );
+} 

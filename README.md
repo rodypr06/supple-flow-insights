@@ -1,73 +1,124 @@
-# Welcome to your Lovable project
+# SuppleFlow - Supplement Tracking & Management
 
-## Project info
+SuppleFlow is a modern web application designed to help users track and manage their supplement intake, get AI-powered insights, and maintain a healthy supplement regimen.
 
-**URL**: https://lovable.dev/projects/5b4ce4f4-7cae-4031-8102-7e18aa88659f
+## Features
 
-## How can I edit this code?
+- **User Profile Management**
+  - Create and manage multiple user profiles
+  - Secure authentication with Supabase
+  - Persistent data storage
 
-There are several ways of editing your application.
+- **Supplement Management**
+  - Add and track multiple supplements
+  - Set recommended dosages and units
+  - Track supplement inventory
+  - View supplement history
 
-**Use Lovable**
+- **Intake Tracking**
+  - Log supplement intakes with dosage and notes
+  - Calendar view of intake history
+  - Daily dosage tracking
+  - Intake history with filtering
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5b4ce4f4-7cae-4031-8102-7e18aa88659f) and start prompting.
+- **AI-Powered Insights**
+  - Personalized supplement recommendations
+  - Intake pattern analysis
+  - Safety and optimization suggestions
+  - Real-time insights based on your data
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Modern UI/UX**
+  - Dark/Light theme support
+  - Responsive design
+  - Intuitive navigation
+  - Loading states and error handling
+  - Toast notifications
 
-**Use your preferred IDE**
+## Tech Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Frontend**
+  - React 18
+  - TypeScript
+  - Vite
+  - Tailwind CSS
+  - Shadcn UI Components
+  - React Query for data fetching
+  - React Router for navigation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Backend**
+  - Supabase for database and authentication
+  - OpenAI API for AI insights
 
-Follow these steps:
+## Getting Started
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/supple-flow.git
+   cd supple-flow
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. Create a `.env` file in the root directory with the following variables:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_OPENAI_API_KEY=your_openai_api_key
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-**Edit a file directly in GitHub**
+5. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Database Schema
 
-**Use GitHub Codespaces**
+### Profiles
+- id: string (primary key)
+- username: string
+- created_at: timestamp
+- updated_at: timestamp
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Supplements
+- id: string (primary key)
+- name: string
+- description: string
+- dosage_unit: string
+- recommended_dosage: number
+- user_id: string (foreign key to profiles)
+- created_at: timestamp
+- updated_at: timestamp
 
-## What technologies are used for this project?
+### Intakes
+- id: string (primary key)
+- supplement_id: string (foreign key to supplements)
+- user_id: string (foreign key to profiles)
+- dosage: number
+- taken_at: timestamp
+- notes: string
+- created_at: timestamp
 
-This project is built with:
+## Contributing
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## How can I deploy this project?
+## License
 
-Simply open [Lovable](https://lovable.dev/projects/5b4ce4f4-7cae-4031-8102-7e18aa88659f) and click on Share -> Publish.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Can I connect a custom domain to my Lovable project?
+## Acknowledgments
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- [Shadcn UI](https://ui.shadcn.com/) for the beautiful UI components
+- [Supabase](https://supabase.com/) for the backend infrastructure
+- [OpenAI](https://openai.com/) for the AI capabilities
+- [React Query](https://tanstack.com/query/latest) for data fetching and caching
+- [Tailwind CSS](https://tailwindcss.com/) for styling

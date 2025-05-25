@@ -1,97 +1,73 @@
 import { useQuery } from '@tanstack/react-query';
-import { useTodayIntakes } from './use-intakes';
-import { useSupplements } from './use-supplements';
+import { db } from '@/lib/supabase';
 import OpenAI from 'openai';
-import { supplementGuidelines } from '@/lib/supplement-guidelines';
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true
 });
 
-export const useAIInsights = (user: string) => {
-  const { data: intakes } = useTodayIntakes(user);
-  const { data: supplements } = useSupplements(user);
-
+export function useAIInsights(userId: string) {
   return useQuery({
-    queryKey: ['ai-insights', user, intakes, supplements],
+    queryKey: ['ai-insights', userId],
     queryFn: async () => {
-      if (!intakes || !supplements) return null;
+      if (!userId) return null;
 
-      // Prepare the data for the AI
-      const intakeData = intakes.map(intake => {
-        const supplement = supplements.find(s => s.id === intake.supplement_id);
-        return {
-          supplement: supplement?.name,
-          quantity: intake.quantity,
-          capsule_mg: supplement?.capsule_mg || null,
-          time: new Date(intake.taken_at).toLocaleTimeString()
-        };
-      });
+      // Get user's recent intakes
+      const intakes = await db.intakes.list(userId);
+      if (!intakes?.length) return null;
 
-      const supplementData = supplements.map(supplement => ({
-        name: supplement.name,
-        maxDosage: supplement.max_dosage,
-        capsule_mg: supplement.capsule_mg || null
+      // Get user's supplements
+      const supplements = await db.supplements.list(userId);
+      if (!supplements?.length) return null;
+
+      // Prepare data for AI analysis
+      const intakeData = intakes.map(intake => ({
+        supplement: intake.supplements.name,
+        dosage: intake.dosage,
+        takenAt: intake.taken_at,
+        notes: intake.notes
       }));
 
-      // Calculate kratom-specific values
-      const kratomIntakes = intakeData.filter(intake => 
-        intake.supplement?.toLowerCase().includes('kratom')
-      );
-      const capsuleMg = supplementGuidelines.kratom.capsuleSize;
-      const totalKratomCapsules = kratomIntakes.reduce((total, intake) => {
-        if (intake.capsule_mg) {
-          return total + Math.round(intake.quantity);
-        }
-        return total + intake.quantity;
-      }, 0);
-      const totalKratomGrams = totalKratomCapsules * capsuleMg / 1000;
-      const doses = totalKratomCapsules / 7; // 7 capsules = ~1 dose (5–8 range)
+      const supplementData = supplements.map(supp => ({
+        name: supp.name,
+        recommendedDosage: supp.recommended_dosage,
+        unit: supp.dosage_unit
+      }));
 
-      // Create the prompt for the AI
-      const prompt = `Given the following supplement intake data for today:
-${JSON.stringify(intakeData, null, 2)}
-
-And the supplement information:
-${JSON.stringify(supplementData, null, 2)}
-
-Kratom Guidelines (for 700mg capsules):
-- Grams per day: 12–16g
-- Capsules per day: 17–23 max
-- Per dose: 5–8 capsules (3x/day)
-- Upper ceiling: Don't exceed 23/day
-
-Today's kratom intake: ${totalKratomCapsules} capsules (${totalKratomGrams.toFixed(1)}g), approx. ${doses.toFixed(1)} doses
-
-Please provide a brief, actionable insight about the user's supplement intake pattern. Focus on:
-1. Consistency in timing
-2. Dosage optimization
-3. Potential interactions or timing improvements
-4. Any notable patterns
-5. For kratom specifically:
-   - Compare current intake against the above guidelines
-   - Suggest appropriate dosage adjustments
-   - Highlight any safety concerns
-   - Recommend timing optimizations
-
-Keep the response concise (2-3 sentences) and actionable. Do not mention beginner or starting low guidance.`;
+      // Generate AI insights
+      const prompt = `
+        Analyze the following supplement intake data and provide personalized insights:
+        
+        Recent Intakes:
+        ${JSON.stringify(intakeData, null, 2)}
+        
+        Supplements:
+        ${JSON.stringify(supplementData, null, 2)}
+        
+        Please provide:
+        1. A brief analysis of intake patterns
+        2. Any potential concerns or recommendations
+        3. Suggestions for optimization
+        Keep the response concise and actionable.
+      `;
 
       try {
         const completion = await openai.chat.completions.create({
           messages: [{ role: "user", content: prompt }],
           model: "gpt-3.5-turbo",
           temperature: 0.7,
-          max_tokens: 150
+          max_tokens: 500
         });
 
         return completion.choices[0]?.message?.content || null;
       } catch (error) {
-        console.error('Error generating AI insight:', error);
-        return null;
+        console.error('Error generating AI insights:', error);
+        throw error;
       }
     },
-    enabled: !!user && !!intakes && !!supplements,
-    refetchInterval: 1000 * 60 * 30, // Refetch every 30 minutes
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: 2
   });
-}; 
+} 

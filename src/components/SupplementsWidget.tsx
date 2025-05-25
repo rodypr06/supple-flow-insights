@@ -17,7 +17,8 @@ import { supabase, type Supplement } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, Pencil } from "lucide-react";
 import { useUserProfile } from "@/App";
-import { useUpdateSupplement } from "@/hooks/use-supplements";
+import { useUpdateSupplement, useDeleteSupplement } from "@/hooks/use-supplements";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EditSupplementFormProps {
   supplement: {
@@ -122,6 +123,12 @@ export function SupplementsWidget() {
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
   const [editSupplement, setEditSupplement] = useState<Supplement | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDosage, setEditDosage] = useState("");
+  const [editUnit, setEditUnit] = useState("mg");
+  const updateSupplement = useUpdateSupplement(user);
+  const deleteSupplement = useDeleteSupplement(user);
 
   const handleDelete = async (supplementId: string) => {
     if (!confirm('Are you sure you want to delete this supplement?')) {
@@ -130,13 +137,7 @@ export function SupplementsWidget() {
 
     try {
       setIsDeleting(true);
-      const { error } = await supabase
-        .from('supplements')
-        .delete()
-        .eq('id', supplementId);
-
-      if (error) throw error;
-
+      await deleteSupplement.mutateAsync(supplementId);
       await queryClient.invalidateQueries({ queryKey: ['supplements'] });
       toast("Supplement deleted successfully");
     } catch (error) {
@@ -144,6 +145,32 @@ export function SupplementsWidget() {
       toast("Failed to delete supplement");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleEdit = (supplement: Supplement) => {
+    setEditingId(supplement.id);
+    setEditName(supplement.name);
+    setEditDosage(supplement.max_dosage.toString());
+    setEditUnit("mg");
+  };
+
+  const handleSave = async (id: string) => {
+    try {
+      await updateSupplement.mutateAsync({
+        id,
+        name: editName,
+        max_dosage: parseFloat(editDosage),
+      });
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ['supplements'] });
+      toast("Success", {
+        description: "Supplement updated successfully"
+      });
+    } catch (error) {
+      toast("Error", {
+        description: "Failed to update supplement"
+      });
     }
   };
 
@@ -164,14 +191,33 @@ export function SupplementsWidget() {
         <TableBody>
           {supplements?.map((supplement) => (
             <TableRow key={supplement.id}>
-              <TableCell>{supplement.name}</TableCell>
-              <TableCell>{supplement.max_dosage} units</TableCell>
+              {editingId === supplement.id ? (
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-32"
+                    />
+                    <Input
+                      type="number"
+                      value={editDosage}
+                      onChange={(e) => setEditDosage(e.target.value)}
+                      className="w-24"
+                    />
+                    <Button onClick={() => handleSave(supplement.id)}>Save</Button>
+                    <Button variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
+                  </div>
+                </TableCell>
+              ) : (
+                <TableCell>{supplement.name} - {supplement.max_dosage} mg</TableCell>
+              )}
               <TableCell>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setEditSupplement(supplement)}
+                    onClick={() => handleEdit(supplement)}
                   >
                     <Pencil className="h-4 w-4 text-blue-500" />
                   </Button>

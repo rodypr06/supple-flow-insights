@@ -1,34 +1,39 @@
 import React, { useState } from "react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useSupplements } from "@/hooks/use-supplements";
-import { useAddIntake } from "@/hooks/use-intakes";
+import { useSupplements } from "../hooks/use-supplements";
+import { useIntakes } from '../hooks/use-intakes';
 import { useUserProfile } from "@/App";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Intake } from '@/lib/supabase';
 
-interface IntakeFormProps {
+export interface IntakeFormProps {
   onComplete: () => void;
+  onError: (error: Error) => void;
 }
 
-export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
+export const IntakeForm = ({ onComplete, onError }: IntakeFormProps) => {
   const { toast } = useToast();
   const { user } = useUserProfile();
-  const { data: supplements, isLoading: isLoadingSupplements } = useSupplements(user);
-  const addIntake = useAddIntake(user);
+  const { supplements, isLoading: isLoadingSupplements } = useSupplements(user);
+  const { createIntake, isCreating } = useIntakes();
   
   // Default to current time for new intakes
   const [time, setTime] = useState(format(new Date(), "HH:mm"));
   const [supplementId, setSupplementId] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [dosage, setDosage] = useState('');
+  const [notes, setNotes] = useState('');
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!supplementId) {
+    if (!supplementId || !user) {
       toast("Error", {
-        description: "Please select a supplement"
+        description: "Please select a supplement and ensure you are logged in"
       });
       return;
     }
@@ -39,11 +44,15 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
       const [hours, minutes] = time.split(":").map(Number);
       takenAt.setHours(hours, minutes, 0, 0);
 
-      await addIntake.mutateAsync({
+      const newIntake: Omit<Intake, 'id' | 'created_at'> = {
         supplement_id: supplementId,
-        quantity,
-        taken_at: takenAt.toISOString()
-      });
+        user_id: user,
+        dosage: parseFloat(dosage),
+        taken_at: takenAt.toISOString(),
+        notes
+      };
+
+      await createIntake(newIntake);
 
       toast("Success", {
         description: "Your supplement intake has been recorded."
@@ -51,9 +60,7 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
       onComplete();
     } catch (error) {
       console.error('Error adding intake:', error);
-      toast("Error", {
-        description: "Failed to record intake. Please try again."
-      });
+      onError(error as Error);
     }
   };
   
@@ -65,31 +72,18 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="supplement">Supplement</Label>
-        <select 
-          id="supplement" 
-          className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-md h-10 px-3 py-2 text-sm"
-          value={supplementId}
-          onChange={(e) => setSupplementId(e.target.value)}
-        >
-          <option value="">Select a supplement</option>
-          {supplements?.map(supplement => (
-            <option key={supplement.id} value={supplement.id}>
-              {supplement.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="quantity">Quantity</Label>
-        <Input 
-          id="quantity" 
-          type="number" 
-          min="1" 
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white" 
-        />
+        <Select value={supplementId} onValueChange={setSupplementId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a supplement" />
+          </SelectTrigger>
+          <SelectContent>
+            {supplements?.map((supplement) => (
+              <SelectItem key={supplement.id} value={supplement.id}>
+                {supplement.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       
       <div className="space-y-2">
@@ -103,12 +97,34 @@ export const IntakeForm = ({ onComplete }: IntakeFormProps) => {
         />
       </div>
       
+      <div className="space-y-2">
+        <Label htmlFor="dosage">Dosage</Label>
+        <Input
+          id="dosage"
+          type="number"
+          value={dosage}
+          onChange={(e) => setDosage(e.target.value)}
+          placeholder="Enter dosage"
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notes (optional)</Label>
+        <Textarea
+          id="notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Add any notes about this intake"
+        />
+      </div>
+      
       <div className="flex justify-end gap-3 pt-4">
         <Button variant="outline" type="button" onClick={onComplete}>
           Cancel
         </Button>
-        <Button type="submit" disabled={addIntake.isPending}>
-          {addIntake.isPending ? "Logging..." : "Log Intake"}
+        <Button type="submit" disabled={isCreating || isLoadingSupplements}>
+          {isCreating ? 'Logging...' : 'Log Intake'}
         </Button>
       </div>
     </form>

@@ -2,12 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Dashboard } from "@/pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { useUserProfiles, addUserProfile } from "@/hooks/use-user-profiles";
+import { Profile } from "@/pages/Profile";
 
 // User profile context for local user selection
 interface UserProfileContextType {
@@ -35,7 +36,7 @@ export function useUserProfile() {
 function UserProfileSelector() {
   const { user, setUser } = useUserProfile();
   const [input, setInput] = useState('');
-  const { data: profiles = [], refetch, isLoading } = useUserProfiles();
+  const { profiles, isLoading } = useUserProfiles();
 
   const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setUser(e.target.value);
@@ -48,7 +49,7 @@ function UserProfileSelector() {
       await addUserProfile(input.trim());
       setUser(input.trim());
       setInput('');
-      refetch();
+      // Optionally, you could trigger a reload here if needed
     } catch (err: any) {
       alert("Error creating user: " + err.message);
     }
@@ -78,8 +79,27 @@ function UserProfileSelector() {
 
 function AppContent() {
   const { user } = useUserProfile();
+  console.log("AppContent user:", user); // Debug log
   if (!user) return <UserProfileSelector />;
-  return <Dashboard />;
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b">
+        <div className="container mx-auto p-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold">SuppleFlow</h1>
+          <nav className="flex gap-4">
+            <Link to="/" className="hover:underline">Dashboard</Link>
+            <Link to="/profile" className="hover:underline">Profile</Link>
+          </nav>
+        </div>
+      </header>
+      <main className="container mx-auto p-4">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+      </main>
+    </div>
+  );
 }
 
 const queryClient = new QueryClient();
@@ -93,7 +113,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<AppContent />} />
+              <Route path="/*" element={<AppContent />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

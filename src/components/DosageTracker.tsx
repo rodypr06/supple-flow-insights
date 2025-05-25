@@ -7,8 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useTodayIntakes } from "@/hooks/use-intakes";
-import { useSupplements } from "@/hooks/use-supplements";
+import { useIntakes } from '@/hooks/use-intakes';
+import { useSupplements } from '@/hooks/use-supplements';
 import { format } from "date-fns";
 import { supplementGuidelines } from '@/lib/supplement-guidelines';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,11 +20,21 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { KratomGuidelinesTable } from './KratomGuidelinesTable';
 import { useUserProfile } from "@/App";
+import { Progress } from '@/components/ui/progress';
+import { startOfDay, endOfDay } from 'date-fns';
+import { Supplement } from '@/lib/supabase';
 
-export const DosageTracker = () => {
+export interface DosageTrackerProps {
+  onError: (error: Error) => void;
+}
+
+export function DosageTracker({ onError }: DosageTrackerProps) {
   const { user } = useUserProfile();
-  const { data: intakes, isLoading: isLoadingIntakes } = useTodayIntakes(user);
-  const { data: supplements, isLoading: isLoadingSupplements } = useSupplements(user);
+  const { intakes, isLoading: isLoadingIntakes } = useIntakes(
+    startOfDay(new Date()).toISOString(),
+    endOfDay(new Date()).toISOString()
+  );
+  const { supplements, isLoading: isLoadingSupplements } = useSupplements();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -39,7 +49,7 @@ export const DosageTracker = () => {
       intake => intake.supplement_id === supplement.id
     ) || [];
     const totalTaken = todayIntakes.reduce(
-      (sum, intake) => sum + intake.quantity,
+      (sum, intake) => sum + intake.dosage,
       0
     );
     const lastIntake = todayIntakes.length > 0
@@ -61,7 +71,7 @@ export const DosageTracker = () => {
 
   const totalKratomGrams = kratomIntakes.reduce((total, intake) => {
     const supplement = supplements?.find(s => s.id === intake.supplement_id);
-    return total + (intake.quantity * (supplement?.capsule_mg || 0) / 1000);
+    return total + (intake.dosage * (supplement?.capsule_mg || 0) / 1000);
   }, 0);
 
   const handleDeleteIntake = async (intakeId: string) => {
@@ -81,6 +91,23 @@ export const DosageTracker = () => {
       setIsDeleting(null);
     }
   };
+
+  const todayIntakes = intakes.reduce((acc, intake) => {
+    const supplement = supplements.find(s => s.id === intake.supplement_id);
+    if (!supplement) return acc;
+
+    const key = supplement.name;
+    if (!acc[key]) {
+      acc[key] = {
+        total: 0,
+        recommended: supplement.recommended_dosage,
+        max: supplement.max_dosage,
+        unit: supplement.dosage_unit
+      };
+    }
+    acc[key].total += intake.dosage;
+    return acc;
+  }, {} as Record<string, { total: number; recommended: number; max: number; unit: string }>);
 
   return (
     <div className="space-y-4">
@@ -111,7 +138,7 @@ export const DosageTracker = () => {
                       {supplement.todayIntakes.length === 0 && <li className="text-xs text-muted-foreground">None</li>}
                       {supplement.todayIntakes.map((intake: any) => (
                         <li key={intake.id} className="flex items-center gap-2 text-xs">
-                          <span>{intake.quantity} @ {new Date(intake.taken_at).toLocaleTimeString()}</span>
+                          <span>{intake.dosage} @ {new Date(intake.taken_at).toLocaleTimeString()}</span>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -158,6 +185,33 @@ export const DosageTracker = () => {
           </CardContent>
         </Card>
       )}
+
+      {Object.entries(todayIntakes).map(([name, data]) => (
+        <Card key={name}>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">{name}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>{data.total} {data.unit}</span>
+                <span>Recommended: {data.recommended} {data.unit}</span>
+              </div>
+              <Progress value={(data.total / data.max) * 100} />
+              {data.total > data.max && (
+                <p className="text-sm text-red-500">
+                  Warning: Exceeded maximum daily dosage
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      {Object.keys(todayIntakes).length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          No intakes recorded for today
+        </p>
+      )}
     </div>
   );
-};
+}

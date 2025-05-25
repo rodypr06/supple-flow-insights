@@ -1,78 +1,76 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase, type Supplement } from '@/lib/supabase';
+import { db, Supplement } from '@/lib/supabase';
+import { useUserProfile } from '@/App';
+import { toast } from 'sonner';
 
-// Fetch all supplements for a user
-export const useSupplements = (user_name: string) => {
-  return useQuery({
-    queryKey: ['supplements', user_name],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('supplements')
-        .select('*')
-        .eq('user_name', user_name)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Supplement[];
-    },
-    enabled: !!user_name,
-  });
-};
-
-// Add new supplement for a user
-export const useAddSupplement = (user_name: string) => {
+export function useSupplements(userId?: string) {
+  const { user } = useUserProfile();
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (newSupplement: Omit<Supplement, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('supplements')
-        .insert([{ ...newSupplement, user_name }])
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Supplement;
+  const targetUser = userId || user;
+
+  const {
+    data: supplements = [],
+    isLoading,
+    error
+  } = useQuery({
+    queryKey: ['supplements', targetUser],
+    queryFn: async () => {
+      const result = await db.supplements.list(targetUser);
+      return result;
+    },
+    enabled: !!targetUser
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (newSupplement: Omit<Supplement, 'id' | 'created_at' | 'updated_at'>) => {
+      const result = await db.supplements.create({ ...newSupplement, user_id: targetUser });
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supplements', user_name] });
+      queryClient.invalidateQueries({ queryKey: ['supplements', targetUser] });
+      toast.success('Supplement added successfully');
     },
+    onError: (error: Error) => {
+      toast.error(`Failed to add supplement: ${error.message}`);
+    }
   });
-};
 
-// Get supplement by ID for a user
-export const useSupplement = (id: string, user_name: string) => {
-  return useQuery({
-    queryKey: ['supplements', id, user_name],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('supplements')
-        .select('*')
-        .eq('id', id)
-        .eq('user_name', user_name)
-        .single();
-      if (error) throw error;
-      return data as Supplement;
-    },
-    enabled: !!id && !!user_name,
-  });
-};
-
-// Update supplement for a user
-export const useUpdateSupplement = (user_name: string) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (update: Partial<Supplement> & { id: string }) => {
-      const { id, ...fields } = update;
-      const { data, error } = await supabase
-        .from('supplements')
-        .update({ ...fields })
-        .eq('id', id)
-        .eq('user_name', user_name)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Supplement;
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Supplement> }) => {
+      const result = await db.supplements.update(id, updates);
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supplements', user_name] });
+      queryClient.invalidateQueries({ queryKey: ['supplements', targetUser] });
+      toast.success('Supplement updated successfully');
     },
+    onError: (error: Error) => {
+      toast.error(`Failed to update supplement: ${error.message}`);
+    }
   });
-}; 
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await db.supplements.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplements', targetUser] });
+      toast.success('Supplement deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete supplement: ${error.message}`);
+    }
+  });
+
+  return {
+    supplements,
+    isLoading,
+    error,
+    createSupplement: createMutation.mutate,
+    updateSupplement: updateMutation.mutate,
+    deleteSupplement: deleteMutation.mutate,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending
+  };
+} 
