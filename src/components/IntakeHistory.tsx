@@ -116,6 +116,11 @@ const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) =
   );
 };
 
+/**
+ * Displays a table of today's supplement intakes with options to delete individual entries.
+ *
+ * Fetches and lists today's intakes for the current user, showing supplement name, dosage, and time taken. Allows users to delete an intake entry, with confirmation and feedback on success or failure.
+ */
 export function IntakeHistory() {
   const { user } = useUserProfile();
   const { data: intakes, isLoading } = useTodayIntakes();
