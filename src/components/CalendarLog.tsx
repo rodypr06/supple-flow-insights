@@ -27,11 +27,11 @@ export const CalendarLog = () => {
     queryKey: ['intakes-month', month.toISOString(), user],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('intake_logs')
-        .select('id, taken_at, quantity, supplements (name), user_name')
+        .from('intakes')
+        .select('id, taken_at, dosage, supplements(name), user_id')
         .gte('taken_at', startOfMonth(month).toISOString())
         .lte('taken_at', endOfMonth(month).toISOString())
-        .eq('user_name', user);
+        .eq('user_id', user);
       if (error) throw error;
       return data || [];
     },
@@ -116,7 +116,7 @@ export const CalendarLog = () => {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-muted-foreground">Supplement</TableHead>
-              <TableHead className="text-muted-foreground text-center">Quantity</TableHead>
+              <TableHead className="text-muted-foreground text-center">Dosage</TableHead>
               <TableHead className="text-muted-foreground text-right">Time</TableHead>
             </TableRow>
           </TableHeader>
@@ -131,7 +131,7 @@ export const CalendarLog = () => {
               intakes.map((intake) => (
                 <TableRow key={intake.id} className="hover:bg-accent/50 border-border">
                   <TableCell className="font-medium">{intake.supplements?.name || 'Unknown'}</TableCell>
-                  <TableCell className="text-center">{intake.quantity}</TableCell>
+                  <TableCell className="text-center">{intake.dosage}</TableCell>
                   <TableCell className="text-right">
                     {format(new Date(intake.taken_at), "h:mm a")}
                   </TableCell>
