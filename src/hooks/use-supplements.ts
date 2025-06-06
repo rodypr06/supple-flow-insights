@@ -73,4 +73,43 @@ export function useSupplements(userId?: string) {
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending
   };
-} 
+}
+
+export function useUpdateSupplement(userId?: string) {
+  const { user } = useUserProfile();
+  const queryClient = useQueryClient();
+  const targetUser = userId || user;
+
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Supplement> }) => {
+      const result = await db.supplements.update(id, updates);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplements', targetUser] });
+      toast.success('Supplement updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update supplement: ${error.message}`);
+    }
+  });
+}
+
+export function useDeleteSupplement(userId?: string) {
+  const { user } = useUserProfile();
+  const queryClient = useQueryClient();
+  const targetUser = userId || user;
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await db.supplements.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplements', targetUser] });
+      toast.success('Supplement deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete supplement: ${error.message}`);
+    }
+  });
+}
