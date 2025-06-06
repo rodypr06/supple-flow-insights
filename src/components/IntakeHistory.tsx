@@ -24,7 +24,7 @@ interface EditIntakeFormProps {
   intake: {
     id: string;
     supplement_id: string;
-    quantity: number;
+    dosage: number;
     taken_at: string;
   };
   supplements: Array<{ id: string; name: string }>;
@@ -34,7 +34,7 @@ interface EditIntakeFormProps {
 const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) => {
   const { toast } = useToast();
   const [supplementId, setSupplementId] = useState(intake.supplement_id);
-  const [quantity, setQuantity] = useState(intake.quantity);
+  const [dosage, setDosage] = useState(intake.dosage);
   const [time, setTime] = useState(format(new Date(intake.taken_at), "HH:mm"));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,10 +45,10 @@ const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) =
       takenAt.setHours(hours, minutes, 0, 0);
 
       const { error } = await supabase
-        .from('intake_logs')
+        .from('intakes')
         .update({
           supplement_id: supplementId,
-          quantity,
+          dosage,
           taken_at: takenAt.toISOString()
         })
         .eq('id', intake.id);
@@ -82,14 +82,14 @@ const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) =
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="quantity">Quantity</Label>
-        <Input 
-          id="quantity" 
-          type="number" 
-          min="1" 
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white" 
+        <Label htmlFor="dosage">Dosage</Label>
+        <Input
+          id="dosage"
+          type="number"
+          min="1"
+          value={dosage}
+          onChange={(e) => setDosage(Number(e.target.value))}
+          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white"
         />
       </div>
       
@@ -118,7 +118,7 @@ const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) =
 
 export function IntakeHistory() {
   const { user } = useUserProfile();
-  const { data: intakes, isLoading } = useTodayIntakes(user);
+  const { data: intakes, isLoading } = useTodayIntakes();
   const { data: supplements } = useSupplements(user);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -159,7 +159,7 @@ export function IntakeHistory() {
         <TableHeader>
           <TableRow>
             <TableHead>Supplement</TableHead>
-            <TableHead>Quantity</TableHead>
+            <TableHead>Dosage</TableHead>
             <TableHead>Time Taken</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -170,7 +170,7 @@ export function IntakeHistory() {
             return (
               <TableRow key={intake.id}>
                 <TableCell>{supplement?.name}</TableCell>
-                <TableCell>{intake.quantity} units</TableCell>
+                <TableCell>{intake.dosage} units</TableCell>
                 <TableCell>{new Date(intake.taken_at).toLocaleTimeString()}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
