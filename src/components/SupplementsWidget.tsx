@@ -17,7 +17,6 @@ import { supabase, type Supplement } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, Pencil } from "lucide-react";
 import { useUserProfile } from "@/App";
-import { useUpdateSupplement, useDeleteSupplement } from "@/hooks/use-supplements";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EditSupplementFormProps {
@@ -34,7 +33,7 @@ interface EditSupplementFormProps {
 const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) => {
   const { toast } = useToast();
   const { user } = useUserProfile();
-  const updateSupplement = useUpdateSupplement(user);
+  const { updateSupplement } = useSupplements(user);
   const [name, setName] = useState(supplement.name);
   const [maxDosage, setMaxDosage] = useState(supplement.max_dosage);
   const [capsuleMg, setCapsuleMg] = useState(supplement.capsule_mg || 0);
@@ -43,7 +42,7 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateSupplement.mutateAsync({
+      await updateSupplement({
         id: supplement.id,
         name,
         max_dosage: maxDosage,
@@ -118,7 +117,12 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
 
 export function SupplementsWidget() {
   const { user } = useUserProfile();
-  const { data: supplements, isLoading } = useSupplements(user);
+  const {
+    supplements,
+    isLoading,
+    updateSupplement,
+    deleteSupplement,
+  } = useSupplements(user);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -127,8 +131,6 @@ export function SupplementsWidget() {
   const [editName, setEditName] = useState("");
   const [editDosage, setEditDosage] = useState("");
   const [editUnit, setEditUnit] = useState("mg");
-  const updateSupplement = useUpdateSupplement(user);
-  const deleteSupplement = useDeleteSupplement(user);
 
   const handleDelete = async (supplementId: string) => {
     if (!confirm('Are you sure you want to delete this supplement?')) {
@@ -137,7 +139,7 @@ export function SupplementsWidget() {
 
     try {
       setIsDeleting(true);
-      await deleteSupplement.mutateAsync(supplementId);
+      await deleteSupplement(supplementId);
       await queryClient.invalidateQueries({ queryKey: ['supplements'] });
       toast("Supplement deleted successfully");
     } catch (error) {
@@ -157,7 +159,7 @@ export function SupplementsWidget() {
 
   const handleSave = async (id: string) => {
     try {
-      await updateSupplement.mutateAsync({
+      await updateSupplement({
         id,
         name: editName,
         max_dosage: parseFloat(editDosage),
