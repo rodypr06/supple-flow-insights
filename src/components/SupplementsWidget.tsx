@@ -8,13 +8,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useSupplements } from "@/hooks/use-supplements";
+import { useSupplements, useUpdateSupplement, useDeleteSupplement } from "@/hooks/use-supplements";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase, type Supplement } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, Pencil } from "lucide-react";
 import { useUserProfile } from "@/App";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,7 +32,7 @@ interface EditSupplementFormProps {
 const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) => {
   const { toast } = useToast();
   const { user } = useUserProfile();
-  const { updateSupplement } = useSupplements(user);
+  const { mutateAsync: updateSupplement } = useUpdateSupplement(user);
   const [name, setName] = useState(supplement.name);
   const [maxDosage, setMaxDosage] = useState(supplement.max_dosage);
   const [capsuleMg, setCapsuleMg] = useState(supplement.capsule_mg || 0);
@@ -117,15 +116,10 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
 
 export function SupplementsWidget() {
   const { user } = useUserProfile();
-  const {
-    supplements,
-    isLoading,
-    updateSupplement,
-    deleteSupplement,
-  } = useSupplements(user);
+  const { supplements, isLoading } = useSupplements(user);
+  const { mutateAsync: updateSupplement } = useUpdateSupplement(user);
+  const { mutateAsync: deleteSupplement, isPending: isDeleting } = useDeleteSupplement(user);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isDeleting, setIsDeleting] = useState(false);
   const [editSupplement, setEditSupplement] = useState<Supplement | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -138,15 +132,11 @@ export function SupplementsWidget() {
     }
 
     try {
-      setIsDeleting(true);
       await deleteSupplement(supplementId);
-      await queryClient.invalidateQueries({ queryKey: ['supplements'] });
       toast("Supplement deleted successfully");
     } catch (error) {
       console.error('Error deleting supplement:', error);
       toast("Failed to delete supplement");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -165,7 +155,6 @@ export function SupplementsWidget() {
         max_dosage: parseFloat(editDosage),
       });
       setEditingId(null);
-      queryClient.invalidateQueries({ queryKey: ['supplements'] });
       toast("Success", {
         description: "Supplement updated successfully"
       });
