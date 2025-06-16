@@ -127,7 +127,6 @@ export function SupplementsWidget() {
   const [editName, setEditName] = useState("");
   const [editDosage, setEditDosage] = useState("");
   const [editUnit, setEditUnit] = useState("mg");
-  const { updateSupplement, deleteSupplement } = useSupplements(user);
 
   const handleDelete = async (supplementId: string) => {
     if (!confirm('Are you sure you want to delete this supplement?')) {
