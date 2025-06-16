@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db, Intake } from '@/lib/supabase';
+import { getDatabase, Intake } from '@/lib/local-storage-db';
 import { useUserProfile } from '@/App';
 import { toast } from 'sonner';
 import { startOfDay, endOfDay } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 
 export function useIntakes(startDate?: string, endDate?: string) {
   const { user } = useUserProfile();
   const queryClient = useQueryClient();
+  const db = getDatabase();
 
   const {
     data: intakes = [],
@@ -14,13 +16,33 @@ export function useIntakes(startDate?: string, endDate?: string) {
     error
   } = useQuery({
     queryKey: ['intakes', user, startDate, endDate],
-    queryFn: () => db.intakes.list(user, startDate, endDate),
+    queryFn: async () => {
+      if (!user) return [];
+      try {
+        return db.getIntakes(user, {
+          startDate,
+          endDate
+        });
+      } catch (error) {
+        throw new Error('Failed to fetch intakes');
+      }
+    },
     enabled: !!user
   });
 
   const createMutation = useMutation({
-    mutationFn: (newIntake: Omit<Intake, 'id' | 'created_at'>) =>
-      db.intakes.create({ ...newIntake, user_id: user }),
+    mutationFn: async (newIntake: Omit<Intake, 'id' | 'created_at'>) => {
+      if (!user) throw new Error('No user selected');
+      try {
+        return db.createIntake({ 
+          ...newIntake, 
+          id: uuidv4(),
+          user_id: user 
+        });
+      } catch (error) {
+        throw new Error('Failed to create intake');
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intakes', user] });
       toast.success('Intake logged successfully');
@@ -30,8 +52,43 @@ export function useIntakes(startDate?: string, endDate?: string) {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<Intake, 'id' | 'created_at' | 'user_id'>> }) => {
+      try {
+        const currentIntake = db.getIntakes(user || '').find(i => i.id === id);
+        if (!currentIntake) throw new Error('Intake not found');
+        
+        // Update the intake by replacing it
+        db.deleteIntake(id);
+        return db.createIntake({
+          ...currentIntake,
+          ...updates,
+          id,
+          user_id: currentIntake.user_id
+        });
+      } catch (error) {
+        throw new Error('Failed to update intake');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intakes', user] });
+      toast.success('Intake updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update intake: ${error.message}`);
+    }
+  });
+
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => db.intakes.delete(id),
+    mutationFn: async (id: string) => {
+      try {
+        const success = db.deleteIntake(id);
+        if (!success) throw new Error('Intake not found');
+        return success;
+      } catch (error) {
+        throw new Error('Failed to delete intake');
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intakes', user] });
       toast.success('Intake deleted successfully');
@@ -46,8 +103,10 @@ export function useIntakes(startDate?: string, endDate?: string) {
     isLoading,
     error,
     createIntake: createMutation.mutate,
+    updateIntake: updateMutation.mutate,
     deleteIntake: deleteMutation.mutate,
     isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending
   };
 }

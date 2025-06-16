@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useAddSupplement } from "@/hooks/use-supplements";
+import { useSupplements } from "@/hooks/use-supplements";
 import { useUserProfile } from "@/App";
 import { useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +15,7 @@ interface SupplementFormProps {
 export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
   const { toast } = useToast();
   const { user } = useUserProfile();
-  const addSupplement = useAddSupplement(user);
+  const { createSupplement } = useSupplements(user);
   const queryClient = useQueryClient();
   
   const [name, setName] = useState("");
@@ -36,10 +36,12 @@ export const SupplementForm = ({ onComplete }: SupplementFormProps) => {
     }
 
     try {
-      await addSupplement.mutateAsync({
+      createSupplement({
         name,
-        image_url: imageUrl || null,
-        max_dosage: parseFloat(dosage),
+        description: '',
+        dosage_unit: unit,
+        recommended_dosage: parseFloat(dosage),
+        max_dosage: parseFloat(dosage)
       });
 
       toast("Success", {

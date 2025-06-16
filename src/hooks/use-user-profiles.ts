@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db, Profile } from '@/lib/supabase';
+import { getDatabase, Profile } from '@/lib/local-storage-db';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export function useUserProfiles() {
   const queryClient = useQueryClient();
+  const db = getDatabase();
 
   const {
     data: profiles = [],
@@ -13,14 +14,25 @@ export function useUserProfiles() {
   } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
-      const { data, error } = await db.profiles.getAll();
-      if (error) throw error;
-      return data;
+      try {
+        return db.getProfiles();
+      } catch (error) {
+        throw new Error('Failed to fetch profiles');
+      }
     }
   });
 
   const createMutation = useMutation({
-    mutationFn: (username: string) => db.profiles.create(username),
+    mutationFn: async (username: string) => {
+      try {
+        return db.createProfile({
+          id: uuidv4(),
+          username
+        });
+      } catch (error) {
+        throw new Error('Failed to create profile');
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
       toast.success('Profile created successfully');
@@ -31,8 +43,15 @@ export function useUserProfiles() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<Profile> }) =>
-      db.profiles.update(id, updates),
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Profile> }) => {
+      try {
+        const result = db.updateProfile(id, updates);
+        if (!result) throw new Error('Profile not found');
+        return result;
+      } catch (error) {
+        throw new Error('Failed to update profile');
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
       toast.success('Profile updated successfully');
@@ -54,8 +73,13 @@ export function useUserProfiles() {
 }
 
 export async function addUserProfile(user_name: string) {
-  const { error } = await supabase
-    .from("user_profiles")
-    .insert([{ user_name }]);
-  if (error) throw error;
+  const db = getDatabase();
+  try {
+    db.createProfile({
+      id: uuidv4(),
+      username: user_name
+    });
+  } catch (error) {
+    throw new Error('Failed to add user profile');
+  }
 } 

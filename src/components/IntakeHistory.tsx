@@ -12,10 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { useTodayIntakes } from "@/hooks/use-intakes";
+import { useTodayIntakes, useIntakes } from "@/hooks/use-intakes";
 import { useSupplements } from "@/hooks/use-supplements";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useUserProfile } from "@/App";
@@ -37,25 +36,24 @@ const EditIntakeForm = ({ intake, supplements, onClose }: EditIntakeFormProps) =
   const [quantity, setQuantity] = useState(intake.quantity);
   const [time, setTime] = useState(format(new Date(intake.taken_at), "HH:mm"));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const { updateIntake } = useIntakes();
+  
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const takenAt = new Date(intake.taken_at);
       const [hours, minutes] = time.split(":").map(Number);
       takenAt.setHours(hours, minutes, 0, 0);
 
-      const { error } = await supabase
-        .from('intake_logs')
-        .update({
+      updateIntake({
+        id: intake.id,
+        updates: {
           supplement_id: supplementId,
-          quantity,
+          dosage: quantity,
           taken_at: takenAt.toISOString()
-        })
-        .eq('id', intake.id);
+        }
+      });
 
-      if (error) throw error;
-
-      toast("Intake updated successfully.");
       onClose();
     } catch (error) {
       console.error('Error updating intake:', error);
@@ -124,28 +122,13 @@ export function IntakeHistory() {
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = async (intakeId: string) => {
+  const { deleteIntake } = useIntakes();
+  
+  const handleDelete = (intakeId: string) => {
     if (!confirm('Are you sure you want to delete this intake?')) {
       return;
     }
-
-    try {
-      setIsDeleting(true);
-      const { error } = await supabase
-        .from('intakes')
-        .delete()
-        .eq('id', intakeId);
-
-      if (error) throw error;
-
-      await queryClient.invalidateQueries({ queryKey: ['intakes'] });
-      toast("Intake deleted successfully");
-    } catch (error) {
-      console.error('Error deleting intake:', error);
-      toast("Failed to delete intake");
-    } finally {
-      setIsDeleting(false);
-    }
+    deleteIntake(intakeId);
   };
 
   if (isLoading) {

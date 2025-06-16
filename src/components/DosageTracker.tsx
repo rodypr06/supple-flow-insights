@@ -17,12 +17,11 @@ import { InfoIcon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { KratomGuidelinesTable } from './KratomGuidelinesTable';
 import { useUserProfile } from "@/App";
 import { Progress } from '@/components/ui/progress';
 import { startOfDay, endOfDay } from 'date-fns';
-import { Supplement } from '@/lib/supabase';
+import { Supplement } from '@/lib/local-storage-db';
 
 export interface DosageTrackerProps {
   onError: (error: Error) => void;
@@ -30,7 +29,7 @@ export interface DosageTrackerProps {
 
 export function DosageTracker({ onError }: DosageTrackerProps) {
   const { user } = useUserProfile();
-  const { intakes, isLoading: isLoadingIntakes } = useIntakes(
+  const { intakes, isLoading: isLoadingIntakes, deleteIntake } = useIntakes(
     startOfDay(new Date()).toISOString(),
     endOfDay(new Date()).toISOString()
   );
@@ -74,22 +73,10 @@ export function DosageTracker({ onError }: DosageTrackerProps) {
     return total + (intake.dosage * (supplement?.capsule_mg || 0) / 1000);
   }, 0);
 
-  const handleDeleteIntake = async (intakeId: string) => {
+  
+  const handleDeleteIntake = (intakeId: string) => {
     if (!confirm('Are you sure you want to delete this intake?')) return;
-    try {
-      setIsDeleting(intakeId);
-      const { error } = await supabase
-        .from('intakes')
-        .delete()
-        .eq('id', intakeId);
-      if (error) throw error;
-      await queryClient.invalidateQueries({ queryKey: ['intakes'] });
-      toast('Intake deleted successfully');
-    } catch (error) {
-      toast('Failed to delete intake');
-    } finally {
-      setIsDeleting(null);
-    }
+    deleteIntake(intakeId);
   };
 
   const todayIntakes = intakes.reduce((acc, intake) => {

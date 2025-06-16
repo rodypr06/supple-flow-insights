@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { useIntakesByDate } from '@/hooks/use-intakes';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { getDatabase } from '@/lib/local-storage-db';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from '@/components/ui/context-menu';
 import { addMonths, startOfMonth, endOfMonth, format as formatDate, isSameDay, isToday, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -26,14 +26,12 @@ export const CalendarLog = () => {
   const { data: monthIntakes, isLoading: isMonthLoading } = useQuery({
     queryKey: ['intakes-month', month.toISOString(), user],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('intake_logs')
-        .select('id, taken_at, quantity, supplements (name), user_name')
-        .gte('taken_at', startOfMonth(month).toISOString())
-        .lte('taken_at', endOfMonth(month).toISOString())
-        .eq('user_name', user);
-      if (error) throw error;
-      return data || [];
+      if (!user) return [];
+      const db = getDatabase();
+      return db.getIntakes(user, {
+        startDate: startOfMonth(month).toISOString(),
+        endDate: endOfMonth(month).toISOString()
+      });
     },
     enabled: !!user,
   });

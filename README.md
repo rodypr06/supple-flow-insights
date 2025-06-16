@@ -45,8 +45,8 @@ SuppleFlow is a modern web application designed to help users track and manage t
   - React Query for data fetching
   - React Router for navigation
 
-- **Backend**
-  - Supabase for database and authentication
+- **Data Storage**
+  - Local browser storage (localStorage-based database)
   - OpenAI API for AI insights
 
 ## Getting Started
@@ -64,44 +64,52 @@ SuppleFlow is a modern web application designed to help users track and manage t
 
 3. Create a `.env` file in the root directory with the following variables:
    ```
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    VITE_OPENAI_API_KEY=your_openai_api_key
    ```
+   
+   **Note:** The OpenAI API key is optional. If not provided, AI insights will not be available, but all other features will work normally.
 
 4. Start the development server:
    ```bash
    npm run dev
    ```
 
-5. Open [http://localhost:5173](http://localhost:5173) in your browser.
+5. Open [http://localhost:8080](http://localhost:8080) in your browser.
 
-## Database Schema
+## Data Storage
 
-### Profiles
-- id: string (primary key)
-- username: string
-- created_at: timestamp
-- updated_at: timestamp
+SuppleFlow now uses **local browser storage** instead of a remote database. All your data is stored locally in your browser's localStorage, which means:
 
-### Supplements
-- id: string (primary key)
-- name: string
-- description: string
-- dosage_unit: string
-- recommended_dosage: number
-- user_id: string (foreign key to profiles)
-- created_at: timestamp
-- updated_at: timestamp
+- **No server required** - runs entirely in your browser
+- **Privacy-focused** - your data never leaves your device
+- **Offline capable** - works without internet connection (except for AI insights)
+- **Instant performance** - no network latency
 
-### Intakes
-- id: string (primary key)
-- supplement_id: string (foreign key to supplements)
-- user_id: string (foreign key to profiles)
-- dosage: number
-- taken_at: timestamp
-- notes: string
-- created_at: timestamp
+### Data Schema
+
+Your data is automatically organized into three main collections:
+
+**Profiles**
+- User profiles for multi-user support
+- Stores username and creation timestamps
+
+**Supplements**  
+- Supplement definitions with dosage information
+- Includes name, description, dosage units, recommended/max dosages
+- Links to user profiles
+
+**Intakes**
+- Logged supplement intakes with timestamps
+- Tracks dosage, time taken, and optional notes
+- Links to both supplements and user profiles
+
+### Data Export/Import
+
+You can backup or transfer your data using the browser's developer tools:
+1. Open Developer Tools (F12)
+2. Go to Application/Storage tab
+3. Find localStorage > your-domain
+4. Look for the `suppleflow_db` key
 
 ## Contributing
 
@@ -118,7 +126,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - [Shadcn UI](https://ui.shadcn.com/) for the beautiful UI components
-- [Supabase](https://supabase.com/) for the backend infrastructure
 - [OpenAI](https://openai.com/) for the AI capabilities
 - [React Query](https://tanstack.com/query/latest) for data fetching and caching
 - [Tailwind CSS](https://tailwindcss.com/) for styling
+- [Vite](https://vitejs.dev/) for the fast build tool
