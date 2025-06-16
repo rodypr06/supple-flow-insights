@@ -50,8 +50,9 @@ function UserProfileSelector() {
       setUser(input.trim());
       setInput('');
       // Optionally, you could trigger a reload here if needed
-    } catch (err: any) {
-      alert("Error creating user: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert("Error creating user: " + message);
     }
   };
 

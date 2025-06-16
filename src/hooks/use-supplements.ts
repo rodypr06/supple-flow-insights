@@ -104,10 +104,12 @@ export function useUpdateSupplement(userId?: string) {
   const { user } = useUserProfile();
   const queryClient = useQueryClient();
   const targetUser = userId || user;
+  const db = getDatabase();
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Supplement> }) => {
-      const result = await db.supplements.update(id, updates);
+      const result = db.updateSupplement(id, updates);
+      if (!result) throw new Error('Supplement not found');
       return result;
     },
     onSuccess: () => {
@@ -124,10 +126,13 @@ export function useDeleteSupplement(userId?: string) {
   const { user } = useUserProfile();
   const queryClient = useQueryClient();
   const targetUser = userId || user;
+  const db = getDatabase();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await db.supplements.delete(id);
+      const success = db.deleteSupplement(id);
+      if (!success) throw new Error('Supplement not found');
+      return success;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplements', targetUser] });

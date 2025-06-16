@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import type { DayContentProps } from 'react-day-picker';
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -51,7 +52,7 @@ export const CalendarLog = () => {
   const { data: intakes, isLoading } = useIntakesByDate(date || new Date(), user);
 
   // Custom day render for react-day-picker
-  function renderDay(props: any) {
+  function renderDay(props: DayContentProps) {
     const day = props.date;
     const key = formatDate(day, 'yyyy-MM-dd');
     const hasIntake = intakeMap[key];

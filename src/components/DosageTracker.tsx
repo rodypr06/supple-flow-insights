@@ -21,7 +21,7 @@ import { KratomGuidelinesTable } from './KratomGuidelinesTable';
 import { useUserProfile } from "@/App";
 import { Progress } from '@/components/ui/progress';
 import { startOfDay, endOfDay } from 'date-fns';
-import { Supplement } from '@/lib/local-storage-db';
+import { Supplement, type Intake } from '@/lib/local-storage-db';
 
 export interface DosageTrackerProps {
   onError: (error: Error) => void;
@@ -123,7 +123,7 @@ export function DosageTracker({ onError }: DosageTrackerProps) {
                   <TableCell>
                     <ul className="space-y-1">
                       {supplement.todayIntakes.length === 0 && <li className="text-xs text-muted-foreground">None</li>}
-                      {supplement.todayIntakes.map((intake: any) => (
+                      {supplement.todayIntakes.map((intake: Intake) => (
                         <li key={intake.id} className="flex items-center gap-2 text-xs">
                           <span>{intake.dosage} @ {new Date(intake.taken_at).toLocaleTimeString()}</span>
                           <Button
