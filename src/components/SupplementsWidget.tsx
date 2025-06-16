@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useSupplements } from "@/hooks/use-supplements";
+import { useSupplements, useUpdateSupplement, useDeleteSupplement } from "@/hooks/use-supplements";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -118,10 +118,10 @@ const EditSupplementForm = ({ supplement, onClose }: EditSupplementFormProps) =>
 
 export function SupplementsWidget() {
   const { user } = useUserProfile();
-  const { data: supplements, isLoading } = useSupplements(user);
+  const { supplements, isLoading } = useSupplements(user);
+  const { mutateAsync: updateSupplement } = useUpdateSupplement(user);
+  const { mutateAsync: deleteSupplement, isPending: isDeleting } = useDeleteSupplement(user);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isDeleting, setIsDeleting] = useState(false);
   const [editSupplement, setEditSupplement] = useState<Supplement | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -135,14 +135,11 @@ export function SupplementsWidget() {
     }
 
     try {
-      setIsDeleting(true);
       deleteSupplement(supplementId);
       toast("Supplement deleted successfully");
     } catch (error) {
       console.error('Error deleting supplement:', error);
       toast("Failed to delete supplement");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -163,7 +160,6 @@ export function SupplementsWidget() {
         }
       });
       setEditingId(null);
-      queryClient.invalidateQueries({ queryKey: ['supplements'] });
       toast("Success", {
         description: "Supplement updated successfully"
       });

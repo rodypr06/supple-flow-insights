@@ -114,7 +114,7 @@ export const CalendarLog = () => {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-muted-foreground">Supplement</TableHead>
-              <TableHead className="text-muted-foreground text-center">Quantity</TableHead>
+              <TableHead className="text-muted-foreground text-center">Dosage</TableHead>
               <TableHead className="text-muted-foreground text-right">Time</TableHead>
             </TableRow>
           </TableHeader>
@@ -129,7 +129,7 @@ export const CalendarLog = () => {
               intakes.map((intake) => (
                 <TableRow key={intake.id} className="hover:bg-accent/50 border-border">
                   <TableCell className="font-medium">{intake.supplements?.name || 'Unknown'}</TableCell>
-                  <TableCell className="text-center">{intake.quantity}</TableCell>
+                  <TableCell className="text-center">{intake.dosage}</TableCell>
                   <TableCell className="text-right">
                     {format(new Date(intake.taken_at), "h:mm a")}
                   </TableCell>
